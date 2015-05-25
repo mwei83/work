@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:task="http://www.springframework.org/schema/task"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.1.xsd
+           http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.1.xsd
+           http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.1.xsd
+           http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.1.xsd"
+	default-autowire="byName">
+	<!-- 配置数据源 -->
+	<bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource"
+		init-method="init" destroy-method="close">
+		<!-- 还有一个问题需要关注，不知道druid是否默认有testOnException。testOnIdle选项处理mysql8小时超时问题，不一定令人满意 -->
+		<!-- ds name 方便监控需求 -->
+		<property name="name" value="towell_ds" />
+		<!-- 数据库基本信息配置 -->
+		<property name="driverClassName" value="com.mysql.jdbc.Driver" />
+		<property name="url" value="jdbc:mysql://127.0.0.1:3306/qccr?useUnicode=true&amp;characterEncoding=utf8" />
+		<property name="username" value="toowell" />
+		<property name="password" value="toowell2013db" />
+		<!-- 初始化连接数量 -->
+		<property name="initialSize" value="5" />
+		<!-- 最大并发连接数 -->
+		<property name="maxActive" value="10" />
+		<!-- 最大空闲连接数 应该无意义，写着好了 -->
+		<property name="maxIdle" value="5" />
+		<!-- 最小空闲连接数 -->
+		<property name="minIdle" value="2" />
+		<!-- 配置获取连接等待超时的时间 ms -->
+		<property name="maxWait" value="1000" />
+		<!-- 牺牲效率，避免活锁 -->
+		<property name="useUnfairLock" value="false" />
+		<!-- 超过时间限制是否回收 未归还(调用close)的连接 -->
+		<property name="removeAbandoned" value="true" />
+		<!-- 超时回收限制多长；没有批量处理需求，设短一点，单位 秒 -->
+		<property name="removeAbandonedTimeout" value="15" />
+		<!-- 用来检测连接是否有效的sql，要求是一个查询语句 -->
+		<property name="validationQuery" value="SELECT 1;" />
+		<!-- 空闲的时候检测（空闲时间超过下面的值） -->
+		<property name="testWhileIdle" value="true" />
+		<!-- Destroy线程检测是否关闭连接的间隔，同时也是空闲检测的判断依据，单位 毫秒 -->
+		<property name="timeBetweenEvictionRunsMillis" value="60000" />
+		<!-- 配置一个连接在池中最小生存的时间，单位是毫秒 -->
+		<property name="minEvictableIdleTimeMillis" value="300000" />
+		<!-- 申请连接时执行validationQuery检测连接是否有效，配置为true会降低性能 -->
+		<property name="testOnBorrow" value="false" />
+		<!-- 归还连接时执行validationQuery检测连接是否有效，配置为true会降低性能 -->
+		<property name="testOnReturn" value="false" />
+		<!-- 是否缓存preparedStatement 即PSCache，mysql5.5以下没有该功能，关闭 -->
+		<property name="poolPreparedStatements" value="false" />
+		<!-- 指定每个连接上PSCache的大小，关闭 -->
+		<property name="maxPoolPreparedStatementPerConnectionSize"
+			value="-1" />
+		<!--属性类型是字符串，通过别名的方式配置扩展插件，常用的插件有： 监控统计用的filter:stat 日志用的filter:log4j 防御SQL注入的filter:wall 
+		<property name="filters" value="filter:wall" /> -->
+
+	</bean>
+
+	<bean id="transactionManager"
+		class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+
+	<tx:annotation-driven transaction-manager="transactionManager"
+		order="200" proxy-target-class="true" />
+
+	<bean id="transactionTemplate"
+		class="org.springframework.transaction.support.TransactionTemplate">
+		<property name="transactionManager" ref="transactionManager" />
+	</bean>
+
+	<bean id="defalutLobHandler" class="org.springframework.jdbc.support.lob.DefaultLobHandler"
+		lazy-init="true" />
+	<!-- 创建SqlSessionFactory，同时指定数据源 -->
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<property name="dataSource" ref="dataSource" />
+		<property name="mapperLocations" value="classpath*:com/taobao/showcase/**/*.xml" />
+		<property name="configLocation" value="classpath:sqlmap-config.xml"></property>
+	</bean>
+	<!-- Mapper接口所在包名，Spring会自动查找其下的Mapper -->
+	<bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+		<property name="basePackage"
+			value="com.mw.framework.dao" />
+	</bean>
+</beans>
